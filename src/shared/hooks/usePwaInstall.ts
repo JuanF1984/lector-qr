@@ -1,57 +1,93 @@
 import { useEffect, useMemo, useState } from "react";
 
 type BIPEvent = Event & {
-    prompt: () => Promise<void>;
-    userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+};
+
+type InstalledRelatedApp = {
+  platform?: string;
+  url?: string;
+  id?: string;
 };
 
 export function usePwaInstall() {
-    const [deferredPrompt, setDeferredPrompt] = useState<BIPEvent | null>(null);
-    const [isInstalled, setIsInstalled] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<BIPEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
 
-    const canInstall = useMemo(
-        () => !!deferredPrompt && !isInstalled,
-        [deferredPrompt, isInstalled]
-    );
+  const canInstall = useMemo(
+    () => !!deferredPrompt && !isInstalled,
+    [deferredPrompt, isInstalled]
+  );
 
-    useEffect(() => {
-        const mq = window.matchMedia?.("(display-mode: standalone)");
-        const updateInstalled = () => setIsInstalled(!!mq?.matches);
-        updateInstalled();
+  useEffect(() => {
+    let isMounted = true;
 
-        mq?.addEventListener?.("change", updateInstalled);
+    const mq = window.matchMedia?.("(display-mode: standalone)");
 
-        const onBeforeInstallPrompt = (e: Event) => {
-            e.preventDefault(); // guardamos el prompt para dispararlo nosotros
-            setDeferredPrompt(e as BIPEvent);
-        };
+    const checkInstalledState = async () => {
+      const standalone = !!mq?.matches;
 
-        const onAppInstalled = () => {
-            setIsInstalled(true);
-            setDeferredPrompt(null);
-        };
+      const navAny = navigator as any;
+      const iosStandalone = !!navAny?.standalone;
 
-        window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
-        window.addEventListener("appinstalled", onAppInstalled);
+      let relatedInstalled = false;
+      if (typeof navAny?.getInstalledRelatedApps === "function") {
+        try {
+          const apps = (await navAny.getInstalledRelatedApps()) as InstalledRelatedApp[];
+          relatedInstalled = Array.isArray(apps) && apps.length > 0;
+        } catch (e){
+            console.error("Error checking installed related apps", e);
+        }
+      }
 
-        return () => {
-            mq?.removeEventListener?.("change", updateInstalled);
-            window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
-            window.removeEventListener("appinstalled", onAppInstalled);
-        };
-    }, []);
-
-    const install = async () => {
-        if (!deferredPrompt) return null;
-
-        await deferredPrompt.prompt();
-        const choice = await deferredPrompt.userChoice;
-
-        // el evento solo sirve una vez
-        setDeferredPrompt(null);
-
-        return choice.outcome; // "accepted" | "dismissed"
+      if (isMounted) {
+        const installed = standalone || iosStandalone || relatedInstalled;
+        setIsInstalled(installed);
+        if (installed) setDeferredPrompt(null);
+      }
     };
 
-    return { canInstall, isInstalled, install };
+    const updateInstalled = () => {
+      checkInstalledState();
+    };
+
+    checkInstalledState();
+    mq?.addEventListener?.("change", updateInstalled);
+
+    const onBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      if (!isInstalled) setDeferredPrompt(e as BIPEvent);
+    };
+
+    const onAppInstalled = () => {
+      setIsInstalled(true);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+    window.addEventListener("appinstalled", onAppInstalled);
+
+    return () => {
+      isMounted = false;
+      mq?.removeEventListener?.("change", updateInstalled);
+      window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", onAppInstalled);
+    };
+  }, [isInstalled]);
+
+  const install = async () => {
+    if (!deferredPrompt) return null;
+
+    await deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+
+    setDeferredPrompt(null);
+
+    if (choice.outcome === "accepted") setIsInstalled(true);
+
+    return choice.outcome;
+  };
+
+  return { canInstall, isInstalled, install };
 }

@@ -26,13 +26,20 @@ export default defineConfig({
             sizes: '192x192',
             type: 'image/png'
           },
-         
-        ]
+
+        ],
+        prefer_related_applications: false,
+        related_applications: [
+          {
+            platform: "webapp",
+            url: "/manifest.webmanifest",
+          },
+        ],
       },
       workbox: {
-          navigateFallback: "/index.html",
+        navigateFallback: "/index.html",
       },
     }),
   ],
- 
+
 })
