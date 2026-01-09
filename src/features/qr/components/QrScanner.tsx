@@ -24,8 +24,9 @@ export function QrScanner() {
                 </header>
 
                 {!isInstalled && canInstall ? (
-                    <button
-                        className="w-full rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-3 font-medium"
+                    <Button
+                        variant="install"
+                        className="w-full"
                         onClick={async () => {
                             const outcome = await install();
                             if (outcome === "accepted") setToast("Instalada ✅");
@@ -34,7 +35,7 @@ export function QrScanner() {
                         }}
                     >
                         Instalar app
-                    </button>
+                    </Button>
                 ) : null}
 
                 {!isInstalled && !canInstall && isIos ? (
