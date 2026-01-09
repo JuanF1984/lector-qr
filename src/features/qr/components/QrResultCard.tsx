@@ -44,7 +44,7 @@ function renderBody(payload: QrPayload) {
         case "whatsapp":
             return (
                 <div className="space-y-2">
-                    <p className="wrap-break-word">{payload.url}</p>
+                    <p className="wrap-break-word">{payload.raw}</p>
 
                     <a
                         className="inline-flex items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2 font-medium"
