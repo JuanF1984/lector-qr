@@ -13,6 +13,7 @@ export function useQrScanner() {
 
     const serviceRef = useRef<ScannerService | null>(null);
     const busyRef = useRef(false);
+    const startingRef = useRef(false);
 
     const [status, setStatus] = useState<Status>("scanning");
     const [error, setError] = useState<string>("");
@@ -24,6 +25,9 @@ export function useQrScanner() {
     };
 
     const start = async () => {
+        if (startingRef.current) return; 
+        startingRef.current = true;
+
         setError("");
         setPayload(null);
         setStatus("scanning");
@@ -31,8 +35,9 @@ export function useQrScanner() {
         try {
             serviceRef.current ??= new ScannerService(regionId);
 
+            await serviceRef.current.stop();
+
             await serviceRef.current.start(async (decodedText) => {
-                // Evita disparos múltiples
                 if (busyRef.current) return;
                 busyRef.current = true;
 
@@ -51,15 +56,18 @@ export function useQrScanner() {
             setStatus("error");
             setError("No pude abrir la cámara. Revisá permisos y que esté en HTTPS.");
             busyRef.current = false;
+        } finally {
+            startingRef.current = false;
         }
     };
 
     useEffect(() => {
         start();
         return () => {
-            serviceRef.current?.stop();
+            serviceRef.current?.dispose();
         };
     }, []);
 
     return { regionId, status, error, payload, start, stop };
 }
+

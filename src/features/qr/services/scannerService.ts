@@ -1,3 +1,4 @@
+// scannerService.ts
 import { Html5Qrcode } from "html5-qrcode";
 
 export type ScannerConfig = {
@@ -21,17 +22,27 @@ export class ScannerService {
         await this.scanner.start(
             { facingMode },
             { fps, qrbox: { width: boxSize, height: boxSize } },
-            (decodedText) => onDecoded(decodedText),
+            onDecoded,
             () => { }
         );
     }
 
     async stop() {
+        // ✅ Pausa: solo detener cámara
+        try {
+            if (this.scanner.isScanning) await this.scanner.stop();
+        } catch {
+            // noop
+        }
+    }
+
+    async dispose() {
+        // ✅ Final: detener + limpiar UI interna
         try {
             if (this.scanner.isScanning) await this.scanner.stop();
             await this.scanner.clear();
-        } catch (e) {
-            console.debug("stop/clear failed", e);
+        } catch {
+            // noop
         }
     }
 }

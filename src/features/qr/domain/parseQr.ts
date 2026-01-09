@@ -5,11 +5,48 @@ type Detector = {
     parse: (text: string) => QrPayload;
 };
 
+function normalizePhoneDigits(input: string) {
+    const digits = input.replace(/\D/g, "");
+    return digits.length ? digits : undefined;
+}
+
 const detectors: Detector[] = [
+    {
+        test: (t) => {
+            try {
+                const u = new URL(t);
+                const host = u.hostname.replace(/^www\./, "");
+                return (
+                    host === "wa.me" ||
+                    (host === "api.whatsapp.com" && u.pathname.startsWith("/send"))
+                );
+            } catch {
+                return false;
+            }
+        },
+        parse: (t) => {
+            try {
+                const u = new URL(t);
+                const host = u.hostname.replace(/^www\./, "");
+
+                if (host === "wa.me") {
+                    const phone = normalizePhoneDigits(u.pathname.slice(1));
+                    return { kind: "whatsapp", url: t, phone, raw: t };
+                }
+
+                const phone = normalizePhoneDigits(u.searchParams.get("phone") ?? "");
+                return { kind: "whatsapp", url: t, phone, raw: t };
+            } catch {
+                return { kind: "whatsapp", url: t, raw: t };
+            }
+        },
+    },
+
     {
         test: (t) => /^https?:\/\//i.test(t),
         parse: (t) => ({ kind: "url", url: t }),
     },
+
     {
         test: (t) => t.startsWith("WIFI:"),
         parse: (t) => ({ kind: "wifi", raw: t }),

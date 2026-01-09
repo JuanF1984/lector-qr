@@ -1,4 +1,4 @@
-export type QrKind = "url" | "wifi" | "email" | "phone" | "geo" | "json" | "text";
+export type QrKind = "url" | "wifi" | "email" | "phone" | "geo" | "json" |"whatsapp"| "text";
 
 export type QrPayload =
     | { kind: "url"; url: string }
@@ -7,4 +7,5 @@ export type QrPayload =
     | { kind: "phone"; phone: string; raw: string }
     | { kind: "geo"; raw: string }
     | { kind: "json"; value: unknown; raw: string }
+    | { kind: "whatsapp"; url: string; phone?: string ; raw: string }
     | { kind: "text"; text: string };
