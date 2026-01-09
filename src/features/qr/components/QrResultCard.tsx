@@ -20,6 +20,7 @@ export function QrResultCard({ payload }: { payload: QrPayload | null }) {
             </div>
 
             <div className="mt-3">{renderBody(payload)}</div>
+
         </Card>
     );
 }

@@ -1,10 +1,17 @@
+import { useState } from "react";
 import { useQrScanner } from "../hooks/useQrScanner";
+import { usePwaInstall } from "../../../shared/hooks/usePwaInstall";
+import { useIsIos } from "../../../shared/hooks/useIsIos";
 import { QrResultCard } from "./QrResultCard";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
+import { Toast } from "../../../shared/ui/Toast";
 
 export function QrScanner() {
     const { regionId, status, error, payload, start, stop } = useQrScanner();
+    const { canInstall, isInstalled, install } = usePwaInstall();
+    const isIos = useIsIos();
+    const [toast, setToast] = useState<string>("");
 
     return (
         <div className="min-h-dvh bg-slate-950 text-slate-100 p-4">
@@ -15,6 +22,27 @@ export function QrScanner() {
                         Se pausa automáticamente cuando detecta un QR.
                     </p>
                 </header>
+
+                {!isInstalled && canInstall ? (
+                    <button
+                        className="w-full rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-3 font-medium"
+                        onClick={async () => {
+                            const outcome = await install();
+                            if (outcome === "accepted") setToast("Instalada ✅");
+                            else if (outcome === "dismissed") setToast("Instalación cancelada");
+                            if (outcome) setTimeout(() => setToast(""), 2000);
+                        }}
+                    >
+                        Instalar app
+                    </button>
+                ) : null}
+
+                {!isInstalled && !canInstall && isIos ? (
+                    <div className="rounded-xl bg-slate-900/60 border border-slate-800 p-3 text-sm text-slate-200">
+                        En iPhone: tocá <span className="font-semibold">Compartir</span> →{" "}
+                        <span className="font-semibold">Agregar a inicio</span>.
+                    </div>
+                ) : null}
 
                 {status === "scanning" ? (
                     <Card>
@@ -42,6 +70,7 @@ export function QrScanner() {
                     </Button>
                 </div>
             </div>
+            {toast ? <Toast text={toast} /> : null}
         </div>
     );
 }
